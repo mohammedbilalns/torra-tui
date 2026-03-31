@@ -7,10 +7,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/mohammedbilalns/torra-cli/internal/downloader"
-	"github.com/mohammedbilalns/torra-cli/internal/history"
-	"github.com/mohammedbilalns/torra-cli/internal/tui"
-	"github.com/mohammedbilalns/torra-cli/internal/tui/config"
+	"github.com/mohammedbilalns/torra-tui/internal/downloader"
+	"github.com/mohammedbilalns/torra-tui/internal/history"
+	"github.com/mohammedbilalns/torra-tui/internal/tui"
+	"github.com/mohammedbilalns/torra-tui/internal/tui/config"
 )
 
 func main() {
@@ -91,7 +91,7 @@ func defaultConfigPath() string {
 	if err != nil || dir == "" {
 		return "./config.toml"
 	}
-	return filepath.Join(dir, "torra-cli", "config.toml")
+	return filepath.Join(dir, "torra-tui", "config.toml")
 }
 
 func defaultDBPath() string {
@@ -99,5 +99,5 @@ func defaultDBPath() string {
 	if err != nil || home == "" {
 		return "./torr.db"
 	}
-	return filepath.Join(home, ".local", "share", "torra-cli", "torr.db")
+	return filepath.Join(home, ".local", "share", "torra-tui", "torr.db")
 }

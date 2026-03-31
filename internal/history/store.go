@@ -7,7 +7,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/mohammedbilalns/torra-cli/internal/models"
+	"github.com/mohammedbilalns/torra-tui/internal/models"
 )
 
 type Store struct {

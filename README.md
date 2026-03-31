@@ -1,4 +1,4 @@
-# torra-cli
+# torra-tui
 
 TUI torrent client.
 
@@ -10,14 +10,14 @@ TUI torrent client.
 Copy the binary to any directory on your `PATH`:
 
 ```bash
-cp ./bin/torra /path/on/your/PATH/
+cp ./bin/torra-tui /path/on/your/PATH/
 ```
 
 Make sure the destination directory is on your `PATH`.
 
 ## Config
 
-`~/.config/torra-cli/config.toml`:
+`~/.config/torra-tui/config.toml`:
 
 ```toml
 download_dir = "/path/to/downloads"

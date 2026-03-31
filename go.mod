@@ -1,4 +1,4 @@
-module github.com/mohammedbilalns/torra-cli
+module github.com/mohammedbilalns/torra-tui
 
 go 1.23
 

@@ -13,10 +13,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
 
-	"github.com/mohammedbilalns/torra-cli/internal/downloader"
-	"github.com/mohammedbilalns/torra-cli/internal/history"
-	"github.com/mohammedbilalns/torra-cli/internal/models"
-	"github.com/mohammedbilalns/torra-cli/internal/tui/config"
+	"github.com/mohammedbilalns/torra-tui/internal/downloader"
+	"github.com/mohammedbilalns/torra-tui/internal/history"
+	"github.com/mohammedbilalns/torra-tui/internal/models"
+	"github.com/mohammedbilalns/torra-tui/internal/tui/config"
 )
 
 type mode int
