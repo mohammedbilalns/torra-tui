@@ -58,3 +58,27 @@ func isValidMagnet(magnet string) bool {
 	}
 	return false
 }
+
+func isVideoFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v", ".mpg", ".mpeg", ".flv", ".wmv", ".3gp", ".ts":
+		return true
+	default:
+		return false
+	}
+}
+
+func minPlayableBytes(total int64) int64 {
+	if total <= 0 {
+		return 256 * 1024
+	}
+	min := int64(256 * 1024)
+	if total < min {
+		return total
+	}
+	if total > 5*1024*1024 {
+		return 1024 * 1024
+	}
+	return min
+}

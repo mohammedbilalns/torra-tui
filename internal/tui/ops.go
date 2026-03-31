@@ -95,3 +95,23 @@ func (m *Model) managerForDir(dir string) (*downloader.Manager, error) {
 	m.managers[dir] = mgr
 	return mgr, nil
 }
+
+type videoFile struct {
+	Path     string
+	FullPath string
+	Length   int64
+}
+
+func filterVideoFiles(files []downloader.FileInfo) []videoFile {
+	var out []videoFile
+	for _, f := range files {
+		if isVideoFile(f.Path) {
+			out = append(out, videoFile{
+				Path:     f.Path,
+				FullPath: f.FullPath,
+				Length:   f.Length,
+			})
+		}
+	}
+	return out
+}

@@ -43,6 +43,22 @@ func (m Model) renderView() string {
 		content := "Change download directory:\n" + m.input.View() + "\n\nPress Enter to save, Esc to cancel."
 		return m.fullscreen(frame.Render(top + "\n\n" + box.Render(content) + "\n\n" + status))
 	}
+	if m.mode == modePromptPlay {
+		content := "Video file detected.\n\nPress p to play now, d to download only."
+		return m.fullscreen(frame.Render(top + "\n\n" + box.Render(content) + "\n\n" + status))
+	}
+	if m.mode == modeSelectVideo {
+		var lines []string
+		for i, vf := range m.videoFiles {
+			cursor := " "
+			if i == m.videoSelect {
+				cursor = "›"
+			}
+			lines = append(lines, fmt.Sprintf("%s %s", cursor, trimTo(vf.Path, 60)))
+		}
+		content := "Select video file to play:\n\n" + strings.Join(lines, "\n") + "\n\nEnter to play, Esc to cancel."
+		return m.fullscreen(frame.Render(top + "\n\n" + box.Render(content) + "\n\n" + status))
+	}
 
 	if len(m.tasks) == 0 {
 		content := "No torrents yet. Press 'a' to add one."

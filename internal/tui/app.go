@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -24,6 +25,8 @@ const (
 	modeSetupDir
 	modeChangeDir
 	modeConfirmReset
+	modePromptPlay
+	modeSelectVideo
 )
 
 type tickMsg time.Time
@@ -49,6 +52,41 @@ type Model struct {
 	lastBytes map[string]int64
 	lastTime  map[string]time.Time
 	speeds    map[string]float64
+
+	prompted     map[string]bool
+	promptTaskID string
+	videoFiles   []videoFile
+	videoSelect  int
+}
+
+func (m *Model) clearVideoPrompt() {
+	m.mode = modeList
+	m.promptTaskID = ""
+	m.videoFiles = nil
+	m.videoSelect = 0
+}
+
+func (m *Model) tryPlayVideo(vf videoFile) {
+	mgr := m.taskManager[m.promptTaskID]
+	if mgr == nil {
+		m.status = "Torrent not active in this session."
+		m.statusAt = time.Now()
+		return
+	}
+	reader, err := mgr.StreamFile(m.promptTaskID, vf.Path)
+	if err != nil {
+		m.status = err.Error()
+		m.statusAt = time.Now()
+		return
+	}
+	if err := playVideoStream(reader); err != nil {
+		m.status = err.Error()
+		m.statusAt = time.Now()
+		_ = reader.Close()
+		return
+	}
+	m.status = "Streaming to mpv..."
+	m.statusAt = time.Now()
 }
 
 func NewModel(store *history.Store, manager *downloader.Manager, downloadDir, configPath, dbPath string, cfg config.Config) (Model, error) {
@@ -87,6 +125,7 @@ func NewModel(store *history.Store, manager *downloader.Manager, downloadDir, co
 		lastBytes:   make(map[string]int64),
 		lastTime:    make(map[string]time.Time),
 		speeds:      make(map[string]float64),
+		prompted:    make(map[string]bool),
 	}, nil
 }
 
@@ -103,6 +142,47 @@ func tickCmd() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.mode == modePromptPlay {
+			switch msg.String() {
+			case "p":
+				if len(m.videoFiles) == 1 {
+					m.tryPlayVideo(m.videoFiles[0])
+					m.clearVideoPrompt()
+					return m, nil
+				}
+				m.mode = modeSelectVideo
+				m.videoSelect = 0
+				return m, nil
+			case "d", "esc":
+				m.clearVideoPrompt()
+				return m, nil
+			}
+			return m, nil
+		}
+		if m.mode == modeSelectVideo {
+			switch msg.String() {
+			case "up", "k":
+				if m.videoSelect > 0 {
+					m.videoSelect--
+				}
+				return m, nil
+			case "down", "j":
+				if m.videoSelect < len(m.videoFiles)-1 {
+					m.videoSelect++
+				}
+				return m, nil
+			case "enter":
+				if len(m.videoFiles) > 0 {
+					m.tryPlayVideo(m.videoFiles[m.videoSelect])
+				}
+				m.clearVideoPrompt()
+				return m, nil
+			case "esc":
+				m.clearVideoPrompt()
+				return m, nil
+			}
+			return m, nil
+		}
 		if m.mode == modeAdd || m.mode == modeSetupDir || m.mode == modeChangeDir {
 			switch msg.String() {
 			case "esc":
@@ -370,6 +450,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			_ = m.store.Upsert(*entry)
 			updated = true
+
+			if entry.State == "downloading" && !m.prompted[entry.ID] {
+				mgr := m.taskManager[entry.ID]
+				if mgr == nil {
+					continue
+				}
+				files, err := mgr.Files(entry.ID)
+				if err != nil {
+					if !errors.Is(err, downloader.ErrNoInfo) {
+						m.prompted[entry.ID] = true
+					}
+					continue
+				}
+				videos := filterVideoFiles(files)
+				m.prompted[entry.ID] = true
+				if len(videos) > 0 {
+					m.promptTaskID = entry.ID
+					m.videoFiles = videos
+					m.mode = modePromptPlay
+					m.status = ""
+					return m, tickCmd()
+				}
+			}
 		}
 		if updated {
 			return m, tickCmd()

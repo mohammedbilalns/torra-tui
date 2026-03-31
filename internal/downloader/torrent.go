@@ -2,6 +2,8 @@ package downloader
 
 import (
 	"errors"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +32,15 @@ type Config struct {
 	DownloadRateLimitKbps int
 	UploadRateLimitKbps   int
 }
+
+type FileInfo struct {
+	Path     string
+	FullPath string
+	Length   int64
+}
+
+var ErrNoInfo = errors.New("torrent info not available")
+var ErrFileNotFound = errors.New("file not found in torrent")
 
 func NewManager(userCfg Config) (*Manager, error) {
 	clientCfg := torrent.NewDefaultClientConfig()
@@ -119,6 +130,80 @@ func (m *Manager) Get(id string) *Task {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.tasks[id]
+}
+
+func (m *Manager) Files(id string) ([]FileInfo, error) {
+	m.mu.Lock()
+	task := m.tasks[id]
+	m.mu.Unlock()
+	if task == nil {
+		return nil, errors.New("unknown task")
+	}
+	if task.torrent == nil || task.torrent.Info() == nil {
+		return nil, ErrNoInfo
+	}
+	info := task.torrent.Info()
+	files := task.torrent.Files()
+	baseName := strings.TrimSpace(info.BestName())
+	out := make([]FileInfo, 0, len(files))
+	for _, f := range files {
+		path := f.Path()
+		fullPath := filepath.Join(task.DownloadDir, filepath.FromSlash(path))
+		if baseName != "" {
+			if strings.HasPrefix(path, baseName+string('/')) || path == baseName {
+				fullPath = filepath.Join(task.DownloadDir, filepath.FromSlash(path))
+			} else {
+				fullPath = filepath.Join(task.DownloadDir, filepath.FromSlash(filepath.Join(baseName, path)))
+			}
+		}
+		out = append(out, FileInfo{
+			Path:     path,
+			FullPath: fullPath,
+			Length:   f.Length(),
+		})
+	}
+	return out, nil
+}
+
+func (m *Manager) DownloadFile(id, path string) error {
+	m.mu.Lock()
+	task := m.tasks[id]
+	m.mu.Unlock()
+	if task == nil {
+		return errors.New("unknown task")
+	}
+	if task.torrent == nil || task.torrent.Info() == nil {
+		return ErrNoInfo
+	}
+	for _, f := range task.torrent.Files() {
+		if f.Path() == path {
+			f.Download()
+			return nil
+		}
+	}
+	return ErrFileNotFound
+}
+
+func (m *Manager) StreamFile(id, path string) (torrent.Reader, error) {
+	m.mu.Lock()
+	task := m.tasks[id]
+	m.mu.Unlock()
+	if task == nil {
+		return nil, errors.New("unknown task")
+	}
+	if task.torrent == nil || task.torrent.Info() == nil {
+		return nil, ErrNoInfo
+	}
+	for _, f := range task.torrent.Files() {
+		if f.Path() == path {
+			f.Download()
+			r := f.NewReader()
+			r.SetResponsive()
+			r.SetReadahead(2 * 1024 * 1024)
+			return r, nil
+		}
+	}
+	return nil, ErrFileNotFound
 }
 
 func (m *Manager) Remove(id string) {
