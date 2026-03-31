@@ -7,7 +7,9 @@ type TorrentEntry struct {
 	Magnet string
 	Name string
 	DownloadDir string
-	Completd bool
+	State string
+	Completed bool
+	BytesCompleted int64
+	Length int64
 	CreatedAt time.Time
 }
-
